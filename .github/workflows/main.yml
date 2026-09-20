@@ -1,0 +1,44 @@
+name: Bing Search Automation
+
+on:
+  workflow_dispatch:
+ # Run every day at 10:00 AM IST
+  schedule:
+    - cron: '30 4 * * *'
+
+jobs:
+  bing-search:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Decrypt auth.json
+        env:
+          AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
+        run: |
+          printf '%s' "$AUTH_PASSWORD" | openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in auth_r.json.enc \
+            -out auth_r.json \
+            -pass stdin
+
+      - name: Run Bing automation
+        run: |
+          python searches.py
+
+      - name: Delete authentication file
+        if: always()
+        run: |
+          rm -f auth_r.json
